@@ -2,6 +2,22 @@
 
 Simple Alerting tool which queries elasticsearch for data, filters it and sends alerts on slack.
 
+## Installation
+
+### Using GO Install
+
+```bash
+go install github.com/dmdhrumilmistry/elk-alerts@latest
+```
+
+### Using git clone
+
+```bash
+git clone https://github.com/dmdhrumilmistry/elk-alerts.git
+cd elk-alerts
+go install
+```
+
 ## Usage
 
 - Basic Usage

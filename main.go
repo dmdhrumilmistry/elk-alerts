@@ -66,67 +66,35 @@ func main() {
 	}
 
 	// Read the YAML file
-	ReadYaml("test.yaml")
+	elkConfig := ReadYaml("test.yaml")
 
 	// elk config
-	elkHost := os.Getenv("ELK_HOST")
-	elkUser := os.Getenv("ELK_USERNAME")
-	elkPassword := os.Getenv("ELK_PASSWORD")
-	index := os.Getenv("ELK_INDEX") // replace with index name
-	threshold := os.Getenv("THRESHOLD")
-	if threshold == "" {
-		threshold = "0"
-	}
-	thr, err := strconv.ParseInt(threshold, 10, 64)
-	if err != nil {
-		log.Fatalf("Invalid Threshold. Error: %s", err)
-	}
-
+	// elkHost := os.Getenv("ELK_HOST")
+	// elkUser := os.Getenv("ELK_USERNAME")
+	// elkPassword := os.Getenv("ELK_PASSWORD")
+	// index := os.Getenv("ELK_INDEX") // replace with index name
+	// threshold := os.Getenv("THRESHOLD")
+	// if threshold == "" {
+	// 	threshold = "0"
+	// }
+	// thr, err := strconv.ParseInt(threshold, 10, 64)
+	// if err != nil {
+	// 	log.Fatalf("Invalid Threshold. Error: %s", err)
+	// }
 	cfg := elasticsearch.Config{
 		Addresses: []string{
-			elkHost,
+			elkConfig.ElkHost,
 		},
-		Username: elkUser,
-		Password: elkPassword,
+		Username: elkConfig.ElkUsername,
+		Password: elkConfig.ElkPassword,
 	}
 
 	es, _ := elasticsearch.NewClient(cfg)
 
-	query := `{
-		"query": {
-		  "bool": {
-			"filter": [
-			  {
-				"range": {
-				  "@timestamp": {
-					"gte": "now-60m"
-				  }
-				}
-			  },
-			  {
-				"term": {
-				  "response.keyword": {
-					"value": 404 
-				  }
-				}
-			  }
-			]
-		  }
-		},
-		"size": 0,
-		"aggs": {
-		  "aggs_data": {
-			"terms": {
-			  "field": "client_ip.keyword"
-			}
-		  }
-		}
-	  }`
-
 	res, err := es.Search(
 		es.Search.WithContext(context.Background()),
-		es.Search.WithIndex(index),
-		es.Search.WithBody(strings.NewReader(query)),
+		es.Search.WithIndex(elkConfig.ElkIndex),
+		es.Search.WithBody(strings.NewReader(elkConfig.Query)),
 	)
 	if err != nil {
 		log.Fatalf("Error performing search: %s", err)

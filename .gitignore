@@ -26,3 +26,4 @@ go.work
 .env
 local.env
 prod.env
+test.yaml

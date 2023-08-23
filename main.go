@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -16,14 +18,15 @@ import (
 )
 
 type AlertConfig struct {
-	ElkHost      string   `yaml:"elk_host"`
-	ElkUsername  string   `yaml:"elk_username"`
-	ElkPassword  string   `yaml:"elk_password"`
-	ElkIndex     string   `yaml:"elk_index"`
-	ElkThreshold uint64   `yaml:"elk_threshold"`
-	Query        string   `yaml:"elk_query"`
-	Whitelist    []string `yaml:"whitelist"`
-	SlackWebhook string   `yaml:"slack_webhook"`
+	ElkHost           string   `yaml:"elk_host"`
+	ElkUsername       string   `yaml:"elk_username"`
+	ElkPassword       string   `yaml:"elk_password"`
+	ElkIndex          string   `yaml:"elk_index"`
+	ElkThreshold      uint64   `yaml:"elk_threshold"`
+	Query             string   `yaml:"elk_query"`
+	Whitelist         []string `yaml:"whitelist"`
+	SlackWebhook      string   `yaml:"slack_webhook"`
+	SlackMessageTitle string   `yaml:"slack_message_title"`
 }
 
 func ReadYaml(filepath string) *AlertConfig {
@@ -85,6 +88,35 @@ func isInIPWhitelist(ipStr string, whitelist []net.IP) bool {
 	return false
 }
 
+func sendSlackMessage(webhookURL string, message map[string]string) error {
+	// Convert the message payload to JSON
+	jsonPayload, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+
+	// Create an HTTP POST request
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create an HTTP client and send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("%d received instead of 200", resp.StatusCode)
+	}
+
+	return nil
+}
+
 func main() {
 	// Read the YAML file
 	elkConfig := ReadYaml("test.yaml")
@@ -140,9 +172,17 @@ func main() {
 		}
 	}
 	if resultStr != "" {
-		fmt.Println(resultStr)
+		resultStr = string(elkConfig.SlackMessageTitle) + "\n" + resultStr
 	} else {
 		fmt.Println("No Data Found")
 	}
 
+	// send slack message if webhook is available
+	if len(elkConfig.SlackWebhook) > 4 {
+		message := map[string]string{
+			"type": "mrkdwn",
+			"text": resultStr,
+		}
+		sendSlackMessage(elkConfig.SlackWebhook, message)
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -118,8 +119,19 @@ func sendSlackMessage(webhookURL string, message map[string]string) error {
 }
 
 func main() {
+	// accept cli args
+	var filepath string
+	flag.StringVar(&filepath, "f", "", "Path to YAML config file")
+	flag.Parse()
+
+	if filepath == "" {
+		log.Fatal("filepath is required")
+		fmt.Printf("Use -h/--help for options")
+		os.Exit(-1)
+	}
+
 	// Read the YAML file
-	elkConfig := ReadYaml("test.yaml")
+	elkConfig := ReadYaml(filepath)
 
 	cfg := elasticsearch.Config{
 		Addresses: []string{
